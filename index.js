@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import http from "node:http";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 function resolvePort() {
@@ -42,15 +43,27 @@ const serverEntryUrl = new URL("./server/dist/index.js", import.meta.url);
 const serverEntryPath = fileURLToPath(serverEntryUrl);
 
 if (!fs.existsSync(serverEntryPath)) {
-  startFallbackServer(
-    new Error(
-      "server/dist/index.js nao encontrado. Rode `npm install` e `npm run build` antes de iniciar o app."
-    )
-  );
-} else {
+  console.log("Build do backend nao encontrado. Executando npm run build...");
+  const build = spawnSync("npm run build", {
+    shell: true,
+    stdio: "inherit"
+  });
+
+  if (build.status !== 0) {
+    startFallbackServer(
+      new Error(`npm run build falhou com codigo ${build.status ?? "desconhecido"}.`)
+    );
+  }
+}
+
+if (fs.existsSync(serverEntryPath)) {
   try {
     await import(serverEntryUrl.href);
   } catch (error) {
     startFallbackServer(error);
   }
+} else {
+  startFallbackServer(
+    new Error("server/dist/index.js nao encontrado apos tentativa de build.")
+  );
 }
