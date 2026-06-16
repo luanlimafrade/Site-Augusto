@@ -121,6 +121,47 @@ Opção recomendada: hospedagem com suporte a Node.js ou VPS.
 6. Inicie o backend com `npm start`.
 7. Aponte o domínio `daianeeaugusto.site` para a aplicação Node.
 
+### Checklist no app Node.js da Hostinger
+
+No hPanel, confira estes pontos para evitar 404 em `/api/health`:
+
+```text
+Application root: pasta do projeto onde fica package.json
+Application startup file: index.js
+Build command: npm run build
+Start command: npm start
+Node environment: production
+```
+
+Se o painel aceitar apenas startup file, use `index.js`. Ele carrega o backend compilado em `server/dist/index.js`, então o build precisa rodar antes.
+
+Configure as variáveis de ambiente no painel da Hostinger. Se fizer upload manual por arquivos, também pode enviar um `.env.production` fora do Git:
+
+```text
+NODE_ENV=production
+FRONTEND_ORIGIN=https://daianeeaugusto.site
+DB_HOST=...
+DB_PORT=3306
+DB_USER=...
+DB_PASSWORD=...
+DB_NAME=...
+DB_AUTO_CREATE=false
+ADMIN_PASSWORD=...
+JWT_SECRET=...
+```
+
+Depois de reiniciar a aplicação, teste:
+
+```text
+https://daianeeaugusto.site/api/health
+```
+
+A resposta correta é:
+
+```json
+{"ok":true}
+```
+
 Se o frontend ficar separado do backend, crie `client/.env` com:
 
 ```text

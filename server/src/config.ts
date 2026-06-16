@@ -1,10 +1,38 @@
 import dotenv from "dotenv";
+import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-dotenv.config({ path: path.resolve(process.cwd(), "../.env") });
-dotenv.config();
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const serverRoot = path.resolve(currentDir, "..");
+const projectRoot = path.resolve(serverRoot, "..");
+const initialNodeEnv = process.env.NODE_ENV || "development";
+
+const envFiles = [`.env.${initialNodeEnv}`, ".env"];
+const envDirs = Array.from(new Set([projectRoot, serverRoot, process.cwd()]));
+
+for (const file of envFiles) {
+  for (const dir of envDirs) {
+    dotenv.config({ path: path.join(dir, file) });
+  }
+}
 
 const isProduction = process.env.NODE_ENV === "production";
+
+function resolveClientDistPath() {
+  if (process.env.CLIENT_DIST_PATH) {
+    return path.resolve(process.cwd(), process.env.CLIENT_DIST_PATH);
+  }
+
+  const candidates = [
+    path.join(projectRoot, "client", "dist"),
+    path.join(projectRoot, "dist"),
+    path.resolve(process.cwd(), "client", "dist"),
+    path.resolve(process.cwd(), "dist")
+  ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+}
 
 function requiredEnv(name: string, fallback?: string) {
   const value = process.env[name] || fallback;
@@ -28,7 +56,5 @@ export const config = {
     name: requiredEnv("DB_NAME", "casamento_daiane_augusto"),
     autoCreate: process.env.DB_AUTO_CREATE === "true"
   },
-  clientDistPath: process.env.CLIENT_DIST_PATH
-    ? path.resolve(process.env.CLIENT_DIST_PATH)
-    : path.resolve(process.cwd(), "../client/dist")
+  clientDistPath: resolveClientDistPath()
 };
