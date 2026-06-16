@@ -18,6 +18,16 @@ for (const file of envFiles) {
 }
 
 const isProduction = process.env.NODE_ENV === "production";
+const requiredProductionEnv = [
+  "ADMIN_PASSWORD",
+  "JWT_SECRET",
+  "DB_HOST",
+  "DB_USER",
+  "DB_NAME"
+];
+const missingProductionEnv = isProduction
+  ? requiredProductionEnv.filter((name) => !process.env[name])
+  : [];
 
 function resolveClientDistPath() {
   if (process.env.CLIENT_DIST_PATH) {
@@ -39,27 +49,30 @@ function resolveClientDistPath() {
   );
 }
 
-function requiredEnv(name: string, fallback?: string) {
-  const value = process.env[name] || fallback;
-  if (!value && isProduction) {
-    throw new Error(`Configure a variável de ambiente ${name}.`);
-  }
-  return value || "";
+function envValue(name: string, fallback = "") {
+  return process.env[name] || fallback;
+}
+
+function parsePort(value: string | undefined) {
+  const port = Number(value || 3333);
+  return Number.isInteger(port) && port > 0 ? port : 3333;
 }
 
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
-  port: Number(process.env.PORT || 3333),
+  host: process.env.HOST || "0.0.0.0",
+  port: parsePort(process.env.PORT),
   frontendOrigin: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
-  adminPassword: requiredEnv("ADMIN_PASSWORD", "troque-esta-senha"),
-  jwtSecret: requiredEnv("JWT_SECRET", "troque-este-segredo"),
+  adminPassword: envValue("ADMIN_PASSWORD", "troque-esta-senha"),
+  jwtSecret: envValue("JWT_SECRET", "troque-este-segredo"),
   database: {
-    host: requiredEnv("DB_HOST", "localhost"),
-    port: Number(process.env.DB_PORT || 3306),
-    user: requiredEnv("DB_USER", "root"),
+    host: envValue("DB_HOST", "localhost"),
+    port: parsePort(process.env.DB_PORT || "3306"),
+    user: envValue("DB_USER", "root"),
     password: process.env.DB_PASSWORD || "",
-    name: requiredEnv("DB_NAME", "casamento_daiane_augusto"),
+    name: envValue("DB_NAME", "casamento_daiane_augusto"),
     autoCreate: process.env.DB_AUTO_CREATE === "true"
   },
-  clientDistPath: resolveClientDistPath()
+  clientDistPath: resolveClientDistPath(),
+  missingProductionEnv
 };

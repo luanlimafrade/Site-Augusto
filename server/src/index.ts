@@ -21,7 +21,17 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, database: databaseStatus });
+  res.json({
+    ok: true,
+    database: databaseStatus,
+    runtime: {
+      nodeEnv: config.nodeEnv,
+      host: config.host,
+      port: config.port,
+      clientDist: fs.existsSync(config.clientDistPath),
+      missingEnv: config.missingProductionEnv
+    }
+  });
 });
 
 app.use("/api/admin", adminRouter);
@@ -53,8 +63,10 @@ app.use(
 );
 
 function startServer() {
-  app.listen(config.port, () => {
-    console.log(`Servidor do casamento rodando na porta ${config.port}`);
+  app.listen(config.port, config.host, () => {
+    console.log(
+      `Servidor do casamento rodando em ${config.host}:${config.port}`
+    );
   });
 }
 
