@@ -25,13 +25,18 @@ function resolveClientDistPath() {
   }
 
   const candidates = [
+    projectRoot,
     path.join(projectRoot, "client", "dist"),
     path.join(projectRoot, "dist"),
     path.resolve(process.cwd(), "client", "dist"),
     path.resolve(process.cwd(), "dist")
   ];
 
-  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+  return (
+    candidates.find((candidate) =>
+      fs.existsSync(path.join(candidate, "index.html"))
+    ) || candidates[1]
+  );
 }
 
 function requiredEnv(name: string, fallback?: string) {
