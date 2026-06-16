@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import http from "node:http";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 function resolvePort() {
@@ -39,43 +38,17 @@ function startFallbackServer(error) {
     });
 }
 
-const serverEntryCandidates = [
-  new URL("./server/dist/index.js", import.meta.url),
-  new URL("./dist/server/dist/index.js", import.meta.url)
-];
+const serverEntryUrl = new URL("./server/dist/index.js", import.meta.url);
+const serverEntryPath = fileURLToPath(serverEntryUrl);
 
-function findServerEntry() {
-  return serverEntryCandidates.find((entryUrl) =>
-    fs.existsSync(fileURLToPath(entryUrl))
+if (!fs.existsSync(serverEntryPath)) {
+  startFallbackServer(
+    new Error("server/dist/index.js nao encontrado no pacote de deploy.")
   );
-}
-
-let serverEntryUrl = findServerEntry();
-
-if (!serverEntryUrl) {
-  console.log("Build do backend nao encontrado. Executando npm run build...");
-  const build = spawnSync("npm run build", {
-    shell: true,
-    stdio: "inherit"
-  });
-
-  if (build.status !== 0) {
-    startFallbackServer(
-      new Error(`npm run build falhou com codigo ${build.status ?? "desconhecido"}.`)
-    );
-  }
-
-  serverEntryUrl = findServerEntry();
-}
-
-if (serverEntryUrl) {
+} else {
   try {
     await import(serverEntryUrl.href);
   } catch (error) {
     startFallbackServer(error);
   }
-} else {
-  startFallbackServer(
-    new Error("server/dist/index.js nao encontrado apos tentativa de build.")
-  );
 }

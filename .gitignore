@@ -11,7 +11,7 @@ server/.env
 server/.env.*
 
 # Builds e caches
-dist/
+# dist/ e o pacote de deploy usado pela Hostinger; manter versionado.
 client/dist/
 server/dist/
 .vite/
