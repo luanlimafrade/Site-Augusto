@@ -53,9 +53,13 @@ function envValue(name: string, fallback = "") {
   return process.env[name] || fallback;
 }
 
-function parsePort(value: string | undefined) {
-  const port = Number(value || 3333);
-  return Number.isInteger(port) && port > 0 ? port : 3333;
+function parsePort(value: string | undefined, fallback = 3333) {
+  if (value && !/^\d+$/.test(value)) {
+    return value;
+  }
+
+  const port = Number(value || fallback);
+  return Number.isInteger(port) && port > 0 ? port : fallback;
 }
 
 export const config = {
@@ -67,7 +71,7 @@ export const config = {
   jwtSecret: envValue("JWT_SECRET", "troque-este-segredo"),
   database: {
     host: envValue("DB_HOST", "localhost"),
-    port: parsePort(process.env.DB_PORT || "3306"),
+    port: Number(parsePort(process.env.DB_PORT, 3306)),
     user: envValue("DB_USER", "root"),
     password: process.env.DB_PASSWORD || "",
     name: envValue("DB_NAME", "casamento_daiane_augusto"),

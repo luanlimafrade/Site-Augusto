@@ -63,10 +63,15 @@ app.use(
 );
 
 function startServer() {
+  if (typeof config.port === "string") {
+    app.listen(config.port, () => {
+      console.log(`Servidor do casamento rodando em ${config.port}`);
+    });
+    return;
+  }
+
   app.listen(config.port, config.host, () => {
-    console.log(
-      `Servidor do casamento rodando em ${config.host}:${config.port}`
-    );
+    console.log(`Servidor do casamento rodando em ${config.host}:${config.port}`);
   });
 }
 
