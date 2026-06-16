@@ -8,6 +8,7 @@ import { adminRouter } from "./routes/admin.js";
 import { rsvpRouter } from "./routes/rsvp.js";
 
 const app = express();
+let databaseStatus: "starting" | "connected" | "error" = "starting";
 
 app.use(
   cors({
@@ -20,7 +21,7 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, database: databaseStatus });
 });
 
 app.use("/api/admin", adminRouter);
@@ -57,17 +58,18 @@ function startServer() {
   });
 }
 
+startServer();
+
 initDatabase()
-  .then(startServer)
+  .then(() => {
+    databaseStatus = "connected";
+  })
   .catch((error) => {
     console.error("Não foi possível conectar ao MySQL.", error);
 
-    if (config.nodeEnv === "production") {
-      process.exit(1);
-    }
+    databaseStatus = "error";
 
     console.warn(
       "Servidor iniciado sem conexão MySQL. Configure DB_USER/DB_PASSWORD para usar RSVP e admin."
     );
-    startServer();
   });
