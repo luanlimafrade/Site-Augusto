@@ -5,8 +5,11 @@ import path from "node:path";
 import { config } from "./config.js";
 import { initDatabase } from "./database.js";
 import { adminRouter } from "./routes/admin.js";
+import { giftsRouter } from "./routes/gifts.js";
+import { mercadoPagoRouter } from "./routes/mercadoPago.js";
 import { rsvpRouter } from "./routes/rsvp.js";
 const app = express();
+fs.mkdirSync(path.join(config.uploadsDir, "gifts"), { recursive: true });
 let databaseStatus = "starting";
 let databaseError = null;
 function getDatabaseError(error) {
@@ -26,7 +29,13 @@ app.use(cors({
         ? config.frontendOrigin.split(",").map((origin) => origin.trim())
         : true
 }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "4mb" }));
+app.use("/uploads", express.static(config.uploadsDir, {
+    maxAge: config.nodeEnv === "production" ? "7d" : 0
+}));
+app.use("/uploads", (_req, res) => {
+    res.status(404).json({ message: "Imagem não encontrada." });
+});
 app.get("/api/health", (_req, res) => {
     res.json({
         ok: true,
@@ -42,6 +51,8 @@ app.get("/api/health", (_req, res) => {
     });
 });
 app.use("/api/admin", adminRouter);
+app.use("/api/gifts", giftsRouter);
+app.use("/api/mercado-pago", mercadoPagoRouter);
 app.use("/api/rsvp", rsvpRouter);
 if (fs.existsSync(config.clientDistPath)) {
     app.use(express.static(config.clientDistPath));

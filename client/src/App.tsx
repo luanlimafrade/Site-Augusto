@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { AdminPage } from "./pages/AdminPage";
 import { DressCodePage } from "./pages/DressCodePage";
+import { GiftReturnPage } from "./pages/GiftReturnPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { GiftsPage } from "./pages/GiftsPage";
 import { HomePage } from "./pages/HomePage";
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/nossa-historia" element={<StoryPage />} />
         <Route path="/local" element={<VenuePage />} />
         <Route path="/presentes" element={<GiftsPage />} />
+        <Route path="/presentes/retorno" element={<GiftReturnPage />} />
         <Route path="/trajes" element={<DressCodePage />} />
         <Route path="/galeria" element={<GalleryPage />} />
         <Route path="/confirmar-presenca" element={<RsvpPage />} />

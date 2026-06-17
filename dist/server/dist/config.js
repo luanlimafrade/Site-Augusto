@@ -6,6 +6,10 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = path.resolve(currentDir, "..");
 const projectRoot = path.resolve(serverRoot, "..");
 const initialNodeEnv = process.env.NODE_ENV || "development";
+const uploadRoot = fs.existsSync(path.join(projectRoot, "client")) &&
+    fs.existsSync(path.join(projectRoot, "package.json"))
+    ? projectRoot
+    : process.cwd();
 const envFiles = [`.env.${initialNodeEnv}`, ".env"];
 const envDirs = Array.from(new Set([projectRoot, serverRoot, process.cwd()]));
 for (const file of envFiles) {
@@ -47,11 +51,23 @@ function parsePort(value, fallback = 3333) {
     const port = Number(value || fallback);
     return Number.isInteger(port) && port > 0 ? port : fallback;
 }
+function parsePositiveInt(value, fallback) {
+    const number = Number(value || fallback);
+    return Number.isInteger(number) && number > 0 ? number : fallback;
+}
 export const config = {
     nodeEnv: process.env.NODE_ENV || "development",
     host: process.env.HOST || "0.0.0.0",
     port: parsePort(process.env.PORT),
     frontendOrigin: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
+    siteUrl: process.env.SITE_URL ||
+        process.env.FRONTEND_ORIGIN ||
+        "http://localhost:5173",
+    checkoutReservationMinutes: parsePositiveInt(process.env.MP_CHECKOUT_TTL_MINUTES, 30),
+    mercadoPago: {
+        accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || "",
+        webhookSecret: process.env.MERCADO_PAGO_WEBHOOK_SECRET || ""
+    },
     adminPassword: envValue("ADMIN_PASSWORD", "troque-esta-senha"),
     jwtSecret: envValue("JWT_SECRET", "troque-este-segredo"),
     database: {
@@ -63,5 +79,8 @@ export const config = {
         autoCreate: process.env.DB_AUTO_CREATE === "true"
     },
     clientDistPath: resolveClientDistPath(),
+    uploadsDir: process.env.UPLOADS_DIR
+        ? path.resolve(process.cwd(), process.env.UPLOADS_DIR)
+        : path.join(uploadRoot, "uploads"),
     missingProductionEnv
 };
