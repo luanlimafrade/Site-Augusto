@@ -9,6 +9,33 @@ import { rsvpRouter } from "./routes/rsvp.js";
 
 const app = express();
 let databaseStatus: "starting" | "connected" | "error" = "starting";
+let databaseError:
+  | {
+      code?: string;
+      errno?: number;
+      sqlState?: string;
+      message?: string;
+    }
+  | null = null;
+
+function getDatabaseError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return { message: String(error) };
+  }
+
+  const mysqlError = error as Error & {
+    code?: string;
+    errno?: number;
+    sqlState?: string;
+  };
+
+  return {
+    code: mysqlError.code,
+    errno: mysqlError.errno,
+    sqlState: mysqlError.sqlState,
+    message: mysqlError.message
+  };
+}
 
 app.use(
   cors({
@@ -30,7 +57,8 @@ app.get("/api/health", (_req, res) => {
       port: config.port,
       clientDist: fs.existsSync(config.clientDistPath),
       missingEnv: config.missingProductionEnv
-    }
+    },
+    databaseError
   });
 });
 
@@ -80,11 +108,13 @@ startServer();
 initDatabase()
   .then(() => {
     databaseStatus = "connected";
+    databaseError = null;
   })
   .catch((error) => {
     console.error("Não foi possível conectar ao MySQL.", error);
 
     databaseStatus = "error";
+    databaseError = getDatabaseError(error);
 
     console.warn(
       "Servidor iniciado sem conexão MySQL. Configure DB_USER/DB_PASSWORD para usar RSVP e admin."
