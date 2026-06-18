@@ -13,7 +13,15 @@ import {
   ShieldCheck,
   Trash2
 } from "lucide-react";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { api, mediaUrl } from "../lib/api";
 import { photos, photoUrl } from "../data/photos";
 import type {
@@ -127,6 +135,50 @@ export function AdminPage() {
     useState<GiftPayload["imageFit"]>("contain");
   const [giftImagePosition, setGiftImagePosition] = useState("center center");
   const [isUploadingGiftImage, setIsUploadingGiftImage] = useState(false);
+  const groupFormRef = useRef<HTMLFormElement>(null);
+  const giftFormRef = useRef<HTMLFormElement>(null);
+  const giftListsRef = useRef<HTMLDivElement>(null);
+
+  const focusAdminSection = (
+    ref: RefObject<HTMLElement | null>,
+    focusSelector?: string
+  ) => {
+    if (!window.matchMedia("(max-width: 1023px)").matches) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const section = ref.current;
+
+      if (!section) return;
+
+      section.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start"
+      });
+
+      const focusTarget = focusSelector
+        ? section.querySelector<HTMLElement>(focusSelector)
+        : section;
+      focusTarget?.focus({ preventScroll: true });
+    });
+  };
+
+  const editGroup = (group: GiftGroupRecord) => {
+    setEditingGroup(group);
+    setGiftError(null);
+    setGiftMessage(null);
+    focusAdminSection(groupFormRef, 'input[name="name"]');
+  };
+
+  const editGift = (gift: GiftRecord) => {
+    setEditingGift(gift);
+    setGiftError(null);
+    setGiftMessage(null);
+    focusAdminSection(giftFormRef, 'input[name="name"]');
+  };
 
   const loadRsvps = async (activeToken = token) => {
     if (!activeToken) return;
@@ -351,6 +403,7 @@ export function AdminPage() {
       setEditingGroup(null);
       formElement.reset();
       await loadGifts(token);
+      focusAdminSection(giftListsRef);
     } catch (saveError) {
       setGiftError(
         saveError instanceof Error
@@ -418,6 +471,7 @@ export function AdminPage() {
       setGiftImagePosition("center center");
       formElement.reset();
       await loadGifts(token);
+      focusAdminSection(giftListsRef);
     } catch (saveError) {
       setGiftError(
         saveError instanceof Error
@@ -661,9 +715,11 @@ export function AdminPage() {
           <div className="mt-6 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
             <div className="space-y-5">
               <form
+                ref={groupFormRef}
                 key={editingGroup?.id ?? "new-group"}
                 onSubmit={saveGroup}
-                className="rounded-2xl border border-moss/10 bg-ivory/70 p-4"
+                tabIndex={-1}
+                className="scroll-mt-24 rounded-2xl border border-moss/10 bg-ivory/70 p-4 outline-none"
               >
                 <div className="flex items-center gap-2 text-moss">
                   <Plus size={18} />
@@ -713,9 +769,11 @@ export function AdminPage() {
               </form>
 
               <form
+                ref={giftFormRef}
                 key={editingGift?.id ?? "new-gift"}
                 onSubmit={saveGift}
-                className="rounded-2xl border border-moss/10 bg-ivory/70 p-4"
+                tabIndex={-1}
+                className="scroll-mt-24 rounded-2xl border border-moss/10 bg-ivory/70 p-4 outline-none"
               >
                 <div className="flex items-center gap-2 text-moss">
                   <PackagePlus size={18} />
@@ -892,7 +950,12 @@ export function AdminPage() {
               </form>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div
+              ref={giftListsRef}
+              tabIndex={-1}
+              className="scroll-mt-24 grid gap-5 outline-none lg:grid-cols-2"
+              aria-label="Grupos e presentes cadastrados"
+            >
               <div className="rounded-2xl border border-moss/10 bg-white p-4">
                 <h3 className="font-semibold text-moss">Grupos cadastrados</h3>
                 <div className="mt-4 space-y-3">
@@ -916,7 +979,7 @@ export function AdminPage() {
                         <div className="flex shrink-0 gap-2">
                           <button
                             type="button"
-                            onClick={() => setEditingGroup(group)}
+                            onClick={() => editGroup(group)}
                             className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-moss/15 text-moss"
                             aria-label="Editar grupo"
                           >
@@ -1017,7 +1080,7 @@ export function AdminPage() {
                                 <div className="flex shrink-0 gap-2">
                                   <button
                                     type="button"
-                                    onClick={() => setEditingGift(gift)}
+                                    onClick={() => editGift(gift)}
                                     className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-moss/15 text-moss"
                                     aria-label={`Editar ${gift.name}`}
                                   >

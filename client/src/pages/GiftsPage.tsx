@@ -4,15 +4,17 @@ import {
   Check,
   ChevronRight,
   CookingPot,
+  Copy,
   CupSoda,
   Gift,
   HeartHandshake,
   Loader2,
   LucideIcon,
   Microwave,
+  Smartphone,
   Sofa
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PageHero } from "../components/PageHero";
 import { photos } from "../data/photos";
 import { siteConfig } from "../data/siteConfig";
@@ -92,6 +94,10 @@ export function GiftsPage() {
   const [error, setError] = useState<string | null>(null);
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [pixCopyStatus, setPixCopyStatus] = useState<
+    "idle" | "copied" | "error"
+  >("idle");
+  const checkoutCardRef = useRef<HTMLElement>(null);
 
   const allGifts = useMemo(
     () => groups.flatMap((group) => group.gifts.map((gift) => ({ ...gift }))),
@@ -137,6 +143,30 @@ export function GiftsPage() {
     };
   }, []);
 
+  const selectGift = (giftId: number) => {
+    setSelectedGiftId(giftId);
+    setCheckoutError(null);
+    setCheckoutMessage(null);
+
+    if (!window.matchMedia("(max-width: 1023px)").matches) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const checkoutCard = checkoutCardRef.current;
+
+      if (!checkoutCard) return;
+
+      checkoutCard.focus({ preventScroll: true });
+      checkoutCard.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start"
+      });
+    });
+  };
+
   const startCheckout = async () => {
     if (!selectedGift) return;
 
@@ -161,6 +191,31 @@ export function GiftsPage() {
     }
   };
 
+  const copyPixKey = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(siteConfig.pixKey);
+      } else {
+        const input = document.createElement("input");
+        input.value = siteConfig.pixKey;
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand("copy");
+        input.remove();
+
+        if (!copied) {
+          throw new Error("Não foi possível copiar a chave Pix.");
+        }
+      }
+
+      setPixCopyStatus("copied");
+    } catch {
+      setPixCopyStatus("error");
+    }
+  };
+
   return (
     <main>
       <PageHero
@@ -176,6 +231,63 @@ export function GiftsPage() {
             {error}
           </p>
         ) : null}
+
+        <section
+          aria-labelledby="pix-gift-title"
+          className="mb-8 overflow-hidden rounded-2xl border border-moss/10 bg-gradient-to-br from-moss via-moss to-ink p-5 text-white shadow-soft md:p-7"
+        >
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <div className="flex items-start gap-4">
+              <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/12 text-lavender">
+                <Smartphone size={24} />
+              </span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-lavender">
+                  Uma opção simples e direta
+                </p>
+                <h2
+                  id="pix-gift-title"
+                  className="mt-2 font-display text-3xl font-semibold leading-tight md:text-4xl"
+                >
+                  Presentear com Pix
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
+                  Abra o aplicativo do seu banco, escolha a opção Pix e cole a
+                  chave abaixo. O valor fica à sua escolha.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/12 bg-white/10 p-4 md:min-w-[300px]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/55">
+                Chave Pix
+              </p>
+              <p className="mt-2 break-all text-lg font-semibold text-white">
+                {siteConfig.pixKey}
+              </p>
+              <button
+                type="button"
+                onClick={copyPixKey}
+                className="focus-ring mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-moss transition hover:bg-ivory"
+              >
+                {pixCopyStatus === "copied" ? (
+                  <Check size={17} />
+                ) : (
+                  <Copy size={17} />
+                )}
+                {pixCopyStatus === "copied"
+                  ? "Chave copiada"
+                  : "Copiar chave Pix"}
+              </button>
+              {pixCopyStatus === "error" ? (
+                <p className="mt-3 text-xs font-medium text-red-100">
+                  Não foi possível copiar automaticamente. Selecione a chave
+                  acima e copie manualmente.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </section>
 
         {isLoading ? (
           <div className="rounded-2xl border border-moss/10 bg-white/74 p-8 text-center text-sm font-semibold text-moss shadow-sm">
@@ -231,7 +343,7 @@ export function GiftsPage() {
                             <button
                               key={gift.id}
                               type="button"
-                              onClick={() => setSelectedGiftId(gift.id)}
+                              onClick={() => selectGift(gift.id)}
                               className={`focus-ring group relative flex w-full flex-col overflow-hidden rounded-xl border text-left transition ${
                                 isSelected
                                   ? "border-plum/38 bg-plum/8 shadow-sm"
@@ -281,7 +393,12 @@ export function GiftsPage() {
               })}
             </div>
 
-            <aside className="lg:sticky lg:top-28">
+            <aside
+              ref={checkoutCardRef}
+              tabIndex={-1}
+              className="scroll-mt-24 outline-none lg:sticky lg:top-28"
+              aria-label="Finalizar escolha do presente"
+            >
               <div className="rounded-2xl border border-moss/10 bg-moss p-6 text-white shadow-soft">
                 <HeartHandshake className="text-lavender" size={28} />
                 <h2 className="mt-5 font-display text-3xl font-semibold leading-tight">
