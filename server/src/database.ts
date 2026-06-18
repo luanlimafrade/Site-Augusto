@@ -911,10 +911,6 @@ export async function createGiftCheckoutReservation(
 
     const gift = mapGift(row);
 
-    if (gift.purchaseStatus === "sold") {
-      throw new Error("Este presente jÃ¡ foi escolhido.");
-    }
-
     if (gift.purchaseStatus === "reserved") {
       throw new Error("Este presente estÃ¡ em processo de escolha.");
     }

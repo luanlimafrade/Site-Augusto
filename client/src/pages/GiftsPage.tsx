@@ -10,8 +10,6 @@ import {
   Loader2,
   LucideIcon,
   Microwave,
-  PackageCheck,
-  ShoppingBasket,
   Sofa
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -86,43 +84,6 @@ function GiftImage({
   );
 }
 
-function GiftCategoryCover({ group }: { group: GiftGroupRecord }) {
-  const Icon = categoryIcon(group.name);
-  const photos = group.gifts.slice(0, 3);
-
-  return (
-    <div className="relative min-h-[196px] overflow-hidden rounded-xl bg-gradient-to-br from-linen via-white to-sage/16 p-4">
-      <div className="absolute inset-x-0 bottom-0 h-12 border-t border-white/60 bg-white/24" />
-      <div className="relative flex h-full flex-col justify-between">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-plum shadow-sm">
-          <Icon size={25} />
-        </span>
-        <div className="mt-8 grid grid-cols-3 gap-3">
-          {photos.length > 0
-            ? photos.map((gift) => (
-                <GiftImage
-                  key={gift.id}
-                  src={gift.imageUrl}
-                  fit={gift.imageFit}
-                  position={gift.imagePosition}
-                  className="h-16 rounded-lg"
-                  imageClassName="h-full w-full object-cover"
-                />
-              ))
-            : [Gift, PackageCheck, ShoppingBasket].map((CoverIcon, index) => (
-                <span
-                  key={index}
-                  className="flex h-16 items-center justify-center rounded-lg bg-white/70 text-moss/70"
-                >
-                  <CoverIcon size={24} />
-                </span>
-              ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function GiftsPage() {
   const [groups, setGroups] = useState<GiftGroupRecord[]>([]);
   const [selectedGiftId, setSelectedGiftId] = useState<number | null>(null);
@@ -141,12 +102,7 @@ export function GiftsPage() {
 
   const loadGifts = async (preferredGiftId?: number | null) => {
     const result = await api.listGifts();
-    const visibleGroups = result.groups
-      .map((group) => ({
-        ...group,
-        gifts: group.gifts.filter((gift) => gift.purchaseStatus !== "sold")
-      }))
-      .filter((group) => group.gifts.length > 0);
+    const visibleGroups = result.groups.filter((group) => group.gifts.length > 0);
     const nextGifts = visibleGroups.flatMap((group) => group.gifts);
     const stillExists = nextGifts.some((gift) => gift.id === preferredGiftId);
 
@@ -182,7 +138,7 @@ export function GiftsPage() {
   }, []);
 
   const startCheckout = async () => {
-    if (!selectedGift || selectedGift.purchaseStatus !== "available") return;
+    if (!selectedGift || selectedGift.purchaseStatus === "reserved") return;
 
     setIsStartingCheckout(true);
     setCheckoutError(null);
@@ -247,78 +203,77 @@ export function GiftsPage() {
                     aria-labelledby={`gift-group-${group.id}`}
                     className="rounded-2xl border border-moss/10 bg-white/74 p-4 shadow-sm backdrop-blur sm:p-5"
                   >
-                    <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
-                      <GiftCategoryCover group={group} />
-                      <div>
-                        <div className="flex flex-wrap items-start gap-3">
-                          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linen text-plum">
-                            <Icon size={21} />
-                          </span>
-                          <div>
-                            <h2
-                              id={`gift-group-${group.id}`}
-                              className="font-display text-3xl font-semibold leading-tight text-moss sm:text-4xl"
-                            >
-                              {group.name}
-                            </h2>
-                            {group.description ? (
-                              <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/64">
-                                {group.description}
-                              </p>
-                            ) : null}
-                          </div>
+                    <div>
+                      <div className="flex flex-wrap items-start gap-3">
+                        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linen text-plum">
+                          <Icon size={21} />
+                        </span>
+                        <div>
+                          <h2
+                            id={`gift-group-${group.id}`}
+                            className="font-display text-3xl font-semibold leading-tight text-moss sm:text-4xl"
+                          >
+                            {group.name}
+                          </h2>
+                          {group.description ? (
+                            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/64">
+                              {group.description}
+                            </p>
+                          ) : null}
                         </div>
+                      </div>
 
-                        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                          {group.gifts.map((gift) => {
-                            const isSelected = selectedGiftId === gift.id;
+                      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                        {group.gifts.map((gift) => {
+                          const isSelected = selectedGiftId === gift.id;
 
-                            return (
-                              <button
-                                key={gift.id}
-                                type="button"
-                                onClick={() => setSelectedGiftId(gift.id)}
-                                className={`focus-ring group grid min-h-[132px] w-full grid-cols-[96px_minmax(0,1fr)_40px] items-center gap-4 rounded-xl border p-3 text-left transition ${
+                          return (
+                            <button
+                              key={gift.id}
+                              type="button"
+                              onClick={() => setSelectedGiftId(gift.id)}
+                              className={`focus-ring group relative flex w-full flex-col overflow-hidden rounded-xl border text-left transition ${
+                                isSelected
+                                  ? "border-plum/38 bg-plum/8 shadow-sm"
+                                  : "border-moss/10 bg-white hover:border-moss/24 hover:bg-ivory"
+                              }`}
+                            >
+                              <GiftImage
+                                src={gift.imageUrl}
+                                fit={gift.imageFit}
+                                position={gift.imagePosition}
+                                className="aspect-[4/3] w-full border-b border-moss/8"
+                                imageClassName="h-full w-full transition duration-500 group-hover:scale-105"
+                              />
+                              <span
+                                className={`absolute right-3 top-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm transition ${
                                   isSelected
-                                    ? "border-plum/38 bg-plum/8 shadow-sm"
-                                    : "border-moss/10 bg-white hover:border-moss/24 hover:bg-ivory"
+                                    ? "bg-plum text-white"
+                                    : "bg-white/92 text-moss group-hover:bg-moss group-hover:text-white"
                                 }`}
                               >
-                                <GiftImage
-                                  src={gift.imageUrl}
-                                  fit={gift.imageFit}
-                                  position={gift.imagePosition}
-                                  className="h-24 rounded-lg"
-                                  imageClassName="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                                />
-                                <span>
-                                  <span className="block text-base font-semibold leading-snug text-ink">
-                                    {gift.name}
-                                  </span>
-                                  <span className="mt-2 block text-sm font-semibold text-moss">
+                                {isSelected ? (
+                                  <Check size={18} />
+                                ) : (
+                                  <ChevronRight size={18} />
+                                )}
+                              </span>
+                              <span className="flex min-h-[148px] w-full flex-1 flex-col p-4">
+                                <span className="block text-base font-semibold leading-snug text-ink">
+                                  {gift.name}
+                                </span>
+                                <span className="mt-auto pt-4">
+                                  <span className="block text-lg font-semibold text-moss">
                                     {formatCurrency(gift.priceCents)}
                                   </span>
                                   <span className="mt-2 block text-xs font-semibold uppercase tracking-[0.18em] text-moss/50">
                                     {giftStatusCopy[gift.purchaseStatus]}
                                   </span>
                                 </span>
-                                <span
-                                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${
-                                    isSelected
-                                      ? "bg-plum text-white"
-                                      : "bg-linen text-moss group-hover:bg-moss group-hover:text-white"
-                                  }`}
-                                >
-                                  {isSelected ? (
-                                    <Check size={18} />
-                                  ) : (
-                                    <ChevronRight size={18} />
-                                  )}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </section>
@@ -373,7 +328,7 @@ export function GiftsPage() {
                   type="button"
                   disabled={
                     !selectedGift ||
-                    selectedGift.purchaseStatus !== "available" ||
+                    selectedGift.purchaseStatus === "reserved" ||
                     isStartingCheckout
                   }
                   onClick={startCheckout}
@@ -386,10 +341,10 @@ export function GiftsPage() {
                   )}
                   {selectedGift?.purchaseStatus === "reserved"
                     ? "Em processo de escolha"
-                    : selectedGift?.purchaseStatus === "sold"
-                      ? "Presenteado"
-                      : isStartingCheckout
-                        ? "Reservando..."
+                    : isStartingCheckout
+                      ? "Reservando..."
+                      : selectedGift?.purchaseStatus === "sold"
+                        ? "Presentear também"
                         : "Reservar presente"}
                 </button>
               </div>
