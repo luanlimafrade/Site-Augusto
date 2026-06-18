@@ -28,7 +28,7 @@ const formatCurrency = (cents: number) =>
     : "Valor a definir";
 
 const giftStatusCopy = {
-  available: "DisponÃ­vel",
+  available: "Disponível",
   reserved: "Em processo de escolha",
   sold: "Presenteado"
 } as const;
