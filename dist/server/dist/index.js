@@ -9,7 +9,23 @@ import { giftsRouter } from "./routes/gifts.js";
 import { mercadoPagoRouter } from "./routes/mercadoPago.js";
 import { rsvpRouter } from "./routes/rsvp.js";
 const app = express();
-fs.mkdirSync(path.join(config.uploadsDir, "gifts"), { recursive: true });
+let uploadsStatus = {
+    writable: false,
+    errorCode: "NOT_CHECKED"
+};
+try {
+    fs.mkdirSync(path.join(config.uploadsDir, "gifts"), { recursive: true });
+    fs.accessSync(config.uploadsDir, fs.constants.R_OK | fs.constants.W_OK);
+    uploadsStatus = { writable: true, errorCode: null };
+}
+catch (error) {
+    const fsError = error;
+    uploadsStatus = {
+        writable: false,
+        errorCode: fsError.code || "UPLOADS_DIR_ERROR"
+    };
+    console.error("Não foi possível preparar o diretório de uploads.", error);
+}
 let databaseStatus = "starting";
 let databaseError = null;
 function getDatabaseError(error) {
@@ -45,6 +61,11 @@ app.get("/api/health", (_req, res) => {
             host: config.host,
             port: config.port,
             clientDist: fs.existsSync(config.clientDistPath),
+            uploads: {
+                configured: config.uploadsDirConfigured,
+                writable: uploadsStatus.writable,
+                errorCode: uploadsStatus.errorCode
+            },
             missingEnv: config.missingProductionEnv
         },
         databaseError

@@ -124,6 +124,96 @@ async function ensureColumn(table, column, definition) {
         await pool.execute(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
     }
 }
+async function getTableColumns(table) {
+    const [rows] = await pool.execute(`
+      SELECT
+        COLUMN_NAME AS columnName,
+        IS_NULLABLE AS isNullable,
+        COLUMN_DEFAULT AS columnDefault,
+        EXTRA AS extra
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+      ORDER BY ORDINAL_POSITION
+    `, [table]);
+    return rows;
+}
+async function ensureGiftColumns() {
+    const existingColumns = new Set((await getTableColumns("gifts")).map((column) => column.columnName));
+    const requiredColumns = [
+        {
+            name: "group_id",
+            definition: "group_id INT UNSIGNED NOT NULL AFTER id"
+        },
+        {
+            name: "name",
+            definition: "name VARCHAR(120) NOT NULL AFTER group_id"
+        },
+        {
+            name: "image_url",
+            definition: "image_url VARCHAR(500) NOT NULL AFTER name"
+        },
+        {
+            name: "image_fit",
+            definition: "image_fit VARCHAR(12) NOT NULL DEFAULT 'contain' AFTER image_url"
+        },
+        {
+            name: "image_position",
+            definition: "image_position VARCHAR(40) NOT NULL DEFAULT 'center center' AFTER image_fit"
+        },
+        {
+            name: "price_cents",
+            definition: "price_cents INT UNSIGNED NOT NULL DEFAULT 0 AFTER image_position"
+        },
+        {
+            name: "purchase_status",
+            definition: "purchase_status VARCHAR(20) NOT NULL DEFAULT 'available' AFTER price_cents"
+        },
+        {
+            name: "reserved_until",
+            definition: "reserved_until DATETIME NULL AFTER purchase_status"
+        },
+        {
+            name: "sold_at",
+            definition: "sold_at DATETIME NULL AFTER reserved_until"
+        },
+        {
+            name: "created_at",
+            definition: "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER sold_at"
+        },
+        {
+            name: "updated_at",
+            definition: "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at"
+        }
+    ];
+    const missingColumns = requiredColumns.filter((column) => !existingColumns.has(column.name));
+    if (missingColumns.length > 0) {
+        const [countRows] = await pool.execute("SELECT COUNT(*) AS total FROM gifts");
+        if (Number(countRows[0]?.total || 0) > 0) {
+            throw new Error(`A tabela gifts possui dados e precisa de migração manual. Colunas ausentes: ${missingColumns
+                .map((column) => column.name)
+                .join(", ")}.`);
+        }
+        for (const column of missingColumns) {
+            await ensureColumn("gifts", column.name, column.definition);
+        }
+    }
+    const finalColumns = await getTableColumns("gifts");
+    const requiredColumnNames = new Set([
+        "id",
+        ...requiredColumns.map((column) => column.name)
+    ]);
+    const incompatibleExtraColumns = finalColumns.filter((column) => !requiredColumnNames.has(column.columnName) &&
+        column.isNullable === "NO" &&
+        column.columnDefault === null &&
+        !column.extra.includes("auto_increment") &&
+        !column.extra.includes("GENERATED"));
+    if (incompatibleExtraColumns.length > 0) {
+        throw new Error(`A tabela gifts possui colunas obrigatórias incompatíveis: ${incompatibleExtraColumns
+            .map((column) => column.columnName)
+            .join(", ")}.`);
+    }
+}
 export async function initDatabase() {
     assertSafeDatabaseName(config.database.name);
     if (config.database.autoCreate) {
@@ -188,12 +278,8 @@ export async function initDatabase() {
         ON UPDATE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `);
-    await ensureColumn("gifts", "image_position", "image_position VARCHAR(40) NOT NULL DEFAULT 'center center' AFTER image_url");
-    await ensureColumn("gifts", "image_fit", "image_fit VARCHAR(12) NOT NULL DEFAULT 'contain' AFTER image_url");
+    await ensureGiftColumns();
     await pool.execute("ALTER TABLE gifts MODIFY image_fit VARCHAR(12) NOT NULL DEFAULT 'contain'");
-    await ensureColumn("gifts", "purchase_status", "purchase_status VARCHAR(20) NOT NULL DEFAULT 'available' AFTER price_cents");
-    await ensureColumn("gifts", "reserved_until", "reserved_until DATETIME NULL AFTER purchase_status");
-    await ensureColumn("gifts", "sold_at", "sold_at DATETIME NULL AFTER reserved_until");
     await pool.execute(`
     CREATE TABLE IF NOT EXISTS gift_orders (
       id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -329,6 +415,7 @@ export async function deleteGiftGroup(id) {
 }
 export async function createGift(input) {
     const purchaseStatus = normalizeGiftInputStatus(input.purchaseStatus);
+    const soldAtSql = purchaseStatus === "sold" ? "UTC_TIMESTAMP()" : "NULL";
     const [result] = await pool.execute(`
       INSERT INTO gifts (
         group_id,
@@ -341,7 +428,7 @@ export async function createGift(input) {
         reserved_until,
         sold_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, NULL, CASE WHEN ? = 'sold' THEN UTC_TIMESTAMP() ELSE NULL END)
+      VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ${soldAtSql})
     `, [
         input.groupId,
         input.name,
@@ -349,7 +436,6 @@ export async function createGift(input) {
         normalizeGiftInputFit(input.imageFit),
         input.imagePosition || "center center",
         input.priceCents,
-        purchaseStatus,
         purchaseStatus
     ]);
     return getGift(result.insertId);

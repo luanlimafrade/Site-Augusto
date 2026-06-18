@@ -148,6 +148,7 @@ DB_NAME=...
 DB_AUTO_CREATE=false
 ADMIN_PASSWORD=...
 JWT_SECRET=...
+UPLOADS_DIR=/home/usuario/uploads
 ```
 
 Depois de reiniciar a aplicação, teste:
@@ -161,6 +162,12 @@ A resposta correta é:
 ```json
 {"ok":true}
 ```
+
+O campo `runtime.uploads` do diagnóstico informa se `UPLOADS_DIR` foi
+configurado e se o processo Node possui permissão de leitura e escrita. Na
+Hostinger, prefira um caminho absoluto e persistente pertencente ao mesmo
+usuário da aplicação. Não use a pasta temporária do build, pois ela pode ser
+substituída em uma nova publicação.
 
 Se o frontend ficar separado do backend, crie `client/.env` com:
 

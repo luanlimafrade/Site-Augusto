@@ -100,6 +100,7 @@ export const config = {
     autoCreate: process.env.DB_AUTO_CREATE === "true"
   },
   clientDistPath: resolveClientDistPath(),
+  uploadsDirConfigured: Boolean(process.env.UPLOADS_DIR),
   uploadsDir: process.env.UPLOADS_DIR
     ? path.resolve(process.cwd(), process.env.UPLOADS_DIR)
     : path.join(uploadRoot, "uploads"),

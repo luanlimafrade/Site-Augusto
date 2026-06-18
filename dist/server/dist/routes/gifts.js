@@ -48,6 +48,30 @@ function handleGiftError(error, res) {
         if (mysqlError.code === "ER_NO_REFERENCED_ROW_2") {
             return res.status(400).json({ message: "Selecione um grupo válido." });
         }
+        if (mysqlError.code === "ER_BAD_FIELD_ERROR" ||
+            mysqlError.code === "ER_NO_DEFAULT_FOR_FIELD" ||
+            mysqlError.code === "ER_BAD_NULL_ERROR" ||
+            mysqlError.code === "ER_NO_SUCH_TABLE") {
+            return res.status(500).json({
+                message: "A estrutura do banco de presentes está desatualizada. Reinicie a aplicação após publicar o backend atualizado.",
+                code: mysqlError.code
+            });
+        }
+        if (mysqlError.code === "ER_DATA_TOO_LONG" ||
+            mysqlError.code === "ER_WARN_DATA_OUT_OF_RANGE" ||
+            mysqlError.code === "ER_TRUNCATED_WRONG_VALUE_FOR_FIELD") {
+            return res.status(400).json({
+                message: "Um dos dados do presente excede o tamanho permitido.",
+                code: mysqlError.code
+            });
+        }
+        if (mysqlError.code === "ER_TABLEACCESS_DENIED_ERROR" ||
+            mysqlError.code === "ER_DBACCESS_DENIED_ERROR") {
+            return res.status(500).json({
+                message: "O usuário do banco não tem permissão para gravar presentes.",
+                code: mysqlError.code
+            });
+        }
     }
     return null;
 }
@@ -122,6 +146,15 @@ giftsRouter.post("/images", requireAdmin, async (req, res, next) => {
     }
     catch (error) {
         if (error instanceof Error) {
+            const fsError = error;
+            if (fsError.code === "EACCES" ||
+                fsError.code === "EPERM" ||
+                fsError.code === "EROFS") {
+                return res.status(500).json({
+                    message: "O diretório de imagens não tem permissão de escrita. Revise UPLOADS_DIR na Hostinger.",
+                    code: fsError.code
+                });
+            }
             return res.status(400).json({ message: error.message });
         }
         return next(error);
