@@ -314,7 +314,7 @@ giftsRouter.post("/:id/checkout", async (req, res, next) => {
       return res.status(201).json({
         order,
         checkoutUrl: preference.checkoutUrl,
-        message: "Reserva criada. Redirecionando para o Mercado Pago."
+        message: "Pagamento iniciado. Redirecionando para o Mercado Pago."
       });
     } catch (checkoutError) {
       await releaseGiftOrder(reservation.order.id);

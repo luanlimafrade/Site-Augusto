@@ -1,4 +1,6 @@
 import {
+  ChevronLeft,
+  ChevronRight,
   Download,
   Edit3,
   Gift,
@@ -26,6 +28,7 @@ import type {
 } from "../types";
 
 const tokenKey = "daiane-augusto-admin-token";
+const giftsPerPage = 5;
 
 const emptyStats: RsvpStats = {
   totalResponses: 0,
@@ -117,6 +120,8 @@ export function AdminPage() {
   const [giftMessage, setGiftMessage] = useState<string | null>(null);
   const [editingGroup, setEditingGroup] = useState<GiftGroupRecord | null>(null);
   const [editingGift, setEditingGift] = useState<GiftRecord | null>(null);
+  const [giftGroupFilter, setGiftGroupFilter] = useState("all");
+  const [giftPage, setGiftPage] = useState(1);
   const [giftImageUrl, setGiftImageUrl] = useState("");
   const [giftImageFit, setGiftImageFit] =
     useState<GiftPayload["imageFit"]>("contain");
@@ -210,6 +215,43 @@ export function AdminPage() {
     () => giftGroups.flatMap((group) => group.gifts),
     [giftGroups]
   );
+
+  const filteredGifts = useMemo(
+    () =>
+      giftGroupFilter === "all"
+        ? allGifts
+        : allGifts.filter((gift) => gift.groupId === Number(giftGroupFilter)),
+    [allGifts, giftGroupFilter]
+  );
+
+  const totalGiftPages = Math.max(
+    1,
+    Math.ceil(filteredGifts.length / giftsPerPage)
+  );
+
+  const paginatedGiftGroups = useMemo(() => {
+    const firstIndex = (giftPage - 1) * giftsPerPage;
+    const pageGiftIds = new Set(
+      filteredGifts
+        .slice(firstIndex, firstIndex + giftsPerPage)
+        .map((gift) => gift.id)
+    );
+
+    return giftGroups
+      .map((group) => ({
+        ...group,
+        gifts: group.gifts.filter((gift) => pageGiftIds.has(gift.id))
+      }))
+      .filter((group) => group.gifts.length > 0);
+  }, [filteredGifts, giftGroups, giftPage]);
+
+  useEffect(() => {
+    setGiftPage(1);
+  }, [giftGroupFilter]);
+
+  useEffect(() => {
+    setGiftPage((currentPage) => Math.min(currentPage, totalGiftPages));
+  }, [totalGiftPages]);
 
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault();
@@ -901,69 +943,148 @@ export function AdminPage() {
               </div>
 
               <div className="rounded-2xl border border-moss/10 bg-white p-4">
-                <h3 className="font-semibold text-moss">Presentes cadastrados</h3>
-                <div className="mt-4 space-y-3">
-                  {allGifts.map((gift) => (
-                    <div
-                      key={gift.id}
-                      className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-xl border border-moss/10 bg-ivory/70 p-3"
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h3 className="font-semibold text-moss">
+                      Presentes cadastrados
+                    </h3>
+                    <p className="mt-1 text-xs text-ink/52">
+                      {filteredGifts.length} de {allGifts.length} presente(s)
+                    </p>
+                  </div>
+                  <label className="block sm:min-w-44">
+                    <span className="sr-only">Filtrar presentes por grupo</span>
+                    <select
+                      value={giftGroupFilter}
+                      onChange={(event) => setGiftGroupFilter(event.target.value)}
+                      className="focus-ring w-full rounded-xl border border-moss/15 bg-ivory px-3 py-2 text-sm text-moss"
                     >
-                      <div className="h-20 overflow-hidden rounded-lg bg-linen">
-                        <img
-                          src={mediaUrl(gift.imageUrl)}
-                          alt=""
-                          className="h-full w-full object-cover"
-                          style={{
-                            objectFit: gift.imageFit,
-                            objectPosition: gift.imagePosition
-                          }}
-                          loading="lazy"
-                        />
+                      <option value="all">Todos os grupos</option>
+                      {giftGroups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-4 space-y-5">
+                  {paginatedGiftGroups.map((group) => (
+                    <section key={group.id} aria-labelledby={`admin-group-${group.id}`}>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <h4
+                          id={`admin-group-${group.id}`}
+                          className="text-xs font-bold uppercase tracking-[0.16em] text-plum"
+                        >
+                          {group.name}
+                        </h4>
+                        <span className="text-xs text-ink/44">
+                          {group.gifts.length} nesta página
+                        </span>
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-ink">
-                              {gift.name}
-                            </p>
-                            <p className="mt-1 text-xs text-ink/58">
-                              {gift.groupName}
-                            </p>
-                            <p className="mt-2 text-sm font-semibold text-moss">
-                              {formatCurrency(gift.priceCents)}
-                            </p>
-                            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-ink/42">
-                              {giftPurchaseStatusCopy[gift.purchaseStatus]}
-                            </p>
+                      <div className="space-y-3">
+                        {group.gifts.map((gift) => (
+                          <div
+                            key={gift.id}
+                            className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-xl border border-moss/10 bg-ivory/70 p-3"
+                          >
+                            <div className="h-20 overflow-hidden rounded-lg bg-linen">
+                              <img
+                                src={mediaUrl(gift.imageUrl)}
+                                alt=""
+                                className="h-full w-full object-cover"
+                                style={{
+                                  objectFit: gift.imageFit,
+                                  objectPosition: gift.imagePosition
+                                }}
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold text-ink">
+                                    {gift.name}
+                                  </p>
+                                  <p className="mt-2 text-sm font-semibold text-moss">
+                                    {formatCurrency(gift.priceCents)}
+                                  </p>
+                                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-ink/42">
+                                    {giftPurchaseStatusCopy[gift.purchaseStatus]}
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingGift(gift)}
+                                    className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-moss/15 text-moss"
+                                    aria-label={`Editar ${gift.name}`}
+                                  >
+                                    <Edit3 size={15} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeGift(gift)}
+                                    className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-red-200 text-red-700"
+                                    aria-label={`Excluir ${gift.name}`}
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex shrink-0 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setEditingGift(gift)}
-                              className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-moss/15 text-moss"
-                              aria-label="Editar presente"
-                            >
-                              <Edit3 size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeGift(gift)}
-                              className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-red-200 text-red-700"
-                              aria-label="Excluir presente"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </div>
+                        ))}
                       </div>
-                    </div>
+                    </section>
                   ))}
-                  {!isGiftsLoading && allGifts.length === 0 ? (
+
+                  {!isGiftsLoading && filteredGifts.length === 0 ? (
                     <p className="rounded-xl bg-ivory p-4 text-sm text-ink/58">
-                      Nenhum presente cadastrado.
+                      {allGifts.length === 0
+                        ? "Nenhum presente cadastrado."
+                        : "Nenhum presente cadastrado neste grupo."}
                     </p>
                   ) : null}
                 </div>
+
+                {filteredGifts.length > giftsPerPage ? (
+                  <nav
+                    className="mt-5 flex items-center justify-between gap-3 border-t border-moss/10 pt-4"
+                    aria-label="Paginação dos presentes"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setGiftPage((currentPage) =>
+                          Math.max(1, currentPage - 1)
+                        )
+                      }
+                      disabled={giftPage === 1}
+                      className="focus-ring inline-flex min-h-10 items-center gap-1 rounded-full border border-moss/15 px-3 py-2 text-xs font-semibold text-moss disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <ChevronLeft size={16} />
+                      Anterior
+                    </button>
+                    <span className="text-xs font-semibold text-ink/58">
+                      Página {giftPage} de {totalGiftPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setGiftPage((currentPage) =>
+                          Math.min(totalGiftPages, currentPage + 1)
+                        )
+                      }
+                      disabled={giftPage === totalGiftPages}
+                      className="focus-ring inline-flex min-h-10 items-center gap-1 rounded-full border border-moss/15 px-3 py-2 text-xs font-semibold text-moss disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Próxima
+                      <ChevronRight size={16} />
+                    </button>
+                  </nav>
+                ) : null}
               </div>
             </div>
           </div>

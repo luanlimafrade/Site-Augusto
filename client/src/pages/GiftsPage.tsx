@@ -138,7 +138,7 @@ export function GiftsPage() {
   }, []);
 
   const startCheckout = async () => {
-    if (!selectedGift || selectedGift.purchaseStatus === "reserved") return;
+    if (!selectedGift) return;
 
     setIsStartingCheckout(true);
     setCheckoutError(null);
@@ -146,7 +146,7 @@ export function GiftsPage() {
 
     try {
       const result = await api.createGiftCheckout(selectedGift.id);
-      setCheckoutMessage("Reserva criada. Redirecionando para o Mercado Pago.");
+      setCheckoutMessage("Pagamento iniciado. Redirecionando para o Mercado Pago.");
       await loadGifts(selectedGift.id);
       window.location.assign(result.checkoutUrl);
     } catch (checkoutIssue) {
@@ -300,8 +300,8 @@ export function GiftsPage() {
                     />
                   ) : null}
                   <p className="text-sm leading-6 text-white/78">
-                    Nesta etapa, o presente fica reservado temporariamente para
-                    preparar a integração com o checkout.
+                    Você será direcionado ao Mercado Pago. Se sair sem concluir,
+                    o presente continuará disponível para novas tentativas.
                   </p>
                   {selectedGift ? (
                     <>
@@ -328,7 +328,6 @@ export function GiftsPage() {
                   type="button"
                   disabled={
                     !selectedGift ||
-                    selectedGift.purchaseStatus === "reserved" ||
                     isStartingCheckout
                   }
                   onClick={startCheckout}
@@ -339,13 +338,11 @@ export function GiftsPage() {
                   ) : (
                     <Gift size={17} />
                   )}
-                  {selectedGift?.purchaseStatus === "reserved"
-                    ? "Em processo de escolha"
-                    : isStartingCheckout
-                      ? "Reservando..."
-                      : selectedGift?.purchaseStatus === "sold"
-                        ? "Presentear também"
-                        : "Reservar presente"}
+                  {isStartingCheckout
+                    ? "Abrindo pagamento..."
+                    : selectedGift?.purchaseStatus === "sold"
+                      ? "Presentear também"
+                      : "Presentear"}
                 </button>
               </div>
             </aside>

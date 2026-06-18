@@ -306,6 +306,40 @@ export async function initDatabase() {
         ON UPDATE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `);
+    await pool.execute(`
+    UPDATE gifts
+    SET purchase_status = CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM gift_orders
+            WHERE gift_orders.gift_id = gifts.id
+              AND gift_orders.status = 'approved'
+          )
+          THEN 'sold'
+          ELSE 'available'
+        END,
+        reserved_until = NULL,
+        sold_at = CASE
+          WHEN EXISTS (
+            SELECT 1
+            FROM gift_orders
+            WHERE gift_orders.gift_id = gifts.id
+              AND gift_orders.status = 'approved'
+          )
+          THEN COALESCE(
+            sold_at,
+            (
+              SELECT MAX(gift_orders.approved_at)
+              FROM gift_orders
+              WHERE gift_orders.gift_id = gifts.id
+                AND gift_orders.status = 'approved'
+            ),
+            UTC_TIMESTAMP()
+          )
+          ELSE NULL
+        END
+    WHERE purchase_status = 'reserved'
+  `);
 }
 export async function createRsvp(input) {
     const [result] = await pool.execute(`
@@ -568,9 +602,6 @@ export async function createGiftCheckoutReservation(giftId) {
             throw new Error("Presente nÃ£o encontrado.");
         }
         const gift = mapGift(row);
-        if (gift.purchaseStatus === "reserved") {
-            throw new Error("Este presente estÃ¡ em processo de escolha.");
-        }
         if (gift.priceCents <= 0) {
             throw new Error("Defina um valor para ativar o checkout deste presente.");
         }
@@ -595,19 +626,12 @@ export async function createGiftCheckoutReservation(giftId) {
             checkoutUrl,
             reservedUntil
         ]);
-        await connection.execute(`
-        UPDATE gifts
-        SET purchase_status = 'reserved',
-            reserved_until = ?,
-            sold_at = NULL
-        WHERE id = ?
-      `, [reservedUntil, gift.id]);
         await connection.commit();
         return {
             order: await getGiftOrderWith(pool, result.insertId),
             gift,
             checkoutUrl,
-            message: "Reserva criada. O checkout do Mercado Pago serÃ¡ conectado na prÃ³xima etapa."
+            message: "Pagamento iniciado. Redirecionando para o Mercado Pago."
         };
     }
     catch (error) {
