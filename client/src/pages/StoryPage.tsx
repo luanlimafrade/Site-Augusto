@@ -47,7 +47,7 @@ export function StoryPage() {
           className="grid grid-cols-2 gap-4"
         >
           <img
-            src={photoUrl(photos.storySecondary)}
+            src={photoUrl(photos.storyPageSecondary)}
             alt=""
             className="h-[440px] rounded-[1.5rem] object-cover"
             loading="lazy"
@@ -60,7 +60,7 @@ export function StoryPage() {
               loading="lazy"
             />
             <img
-              src={photoUrl("0S4A9348.jpg")}
+              src={photoUrl(photos.storyPageExtra)}
               alt=""
               className="h-52 rounded-[1.5rem] object-cover"
               loading="lazy"

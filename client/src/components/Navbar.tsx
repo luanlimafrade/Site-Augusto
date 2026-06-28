@@ -58,8 +58,8 @@ export function Navbar() {
       </nav>
 
       {isOpen ? (
-        <div className="border-t border-moss/10 bg-ivory/98 px-4 pb-5 lg:hidden">
-          <div className="mx-auto grid max-w-sm gap-2 pt-3">
+        <div className="border-t border-moss/10 bg-ivory px-4 pb-6 shadow-soft lg:hidden">
+          <div className="mx-auto mt-4 grid max-w-sm gap-2 rounded-[1.75rem] border border-moss/10 bg-white/95 p-3 shadow-soft">
             {navItems.map((item) => {
               const active = location.pathname === item.path;
               return (
@@ -68,12 +68,12 @@ export function Navbar() {
                   to={item.path}
                   onClick={close}
                   className={[
-                    "focus-ring rounded-full px-5 py-3 text-center text-sm font-semibold transition",
+                    "focus-ring rounded-full px-5 py-3.5 text-center text-base font-semibold transition",
                     item.highlight
-                      ? "bg-moss text-ivory"
+                      ? "bg-moss text-ivory shadow-sm hover:bg-ink"
                       : active
-                        ? "bg-white text-moss"
-                        : "text-ink/80 hover:bg-white"
+                        ? "bg-linen text-moss shadow-sm"
+                        : "text-ink hover:bg-linen/80 hover:text-moss"
                   ].join(" ")}
                 >
                   {item.label}
