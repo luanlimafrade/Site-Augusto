@@ -9,21 +9,21 @@ const returnCopy = {
     icon: Check,
     title: "Obrigado pelo carinho",
     text:
-      "Recebemos o retorno do Mercado Pago. A confirmaÃ§Ã£o final acontece automaticamente assim que o pagamento for validado.",
+      "Recebemos o retorno do Mercado Pago. A confirmação final acontece automaticamente assim que o pagamento for validado.",
     tone: "text-moss"
   },
   pending: {
     icon: Clock,
-    title: "Pagamento em anÃ¡lise",
+    title: "Pagamento em análise",
     text:
-      "O Mercado Pago ainda estÃ¡ processando a confirmaÃ§Ã£o. Assim que houver uma atualizaÃ§Ã£o, o presente serÃ¡ ajustado automaticamente.",
+      "O Mercado Pago ainda está processando a confirmação. Assim que houver uma atualização, o presente será ajustado automaticamente.",
     tone: "text-plum"
   },
   failure: {
     icon: XCircle,
-    title: "Pagamento nÃ£o concluÃ­do",
+    title: "Pagamento não concluído",
     text:
-      "NÃ£o foi possÃ­vel concluir o pagamento. VocÃª pode voltar para a lista e tentar novamente em instantes.",
+      "Não foi possível concluir o pagamento. Você pode voltar para a lista e tentar novamente em instantes.",
     tone: "text-red-700"
   }
 } as const;

@@ -540,7 +540,7 @@ export function AdminPage() {
       setGiftError(
         releaseError instanceof Error
           ? releaseError.message
-          : "NÃ£o foi possÃ­vel liberar a reserva."
+          : "Não foi possível liberar a reserva."
       );
     }
   };
